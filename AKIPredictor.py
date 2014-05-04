@@ -62,7 +62,7 @@ class Patient(object):
         plt.ylabel("Creatinine")
         plt.show()
      
-def createCrDict(df: DataFrame):
+def createPtDict(df: DataFrame):
     global ptDict 
     uniqueMRN = np.unique(df.ix[:, 0])
     for i in uniqueMRN: ptDict[i] = dict()
@@ -76,8 +76,10 @@ def createCrDict(df: DataFrame):
 def createPts(patients: dict):
     global Patients
     for key in patients:
-        temp = Patient(mrn=key, crs=patients[key])
-        Patients[key]=(temp)
+        crs = patients[key]
+        try: mrn = int(key)
+        except: mrn = 0
+        if len(crs) > 0: Patients[mrn] = Patient(mrn=mrn, crs=crs)
 
 def plotPatients():
     global Patients
@@ -102,7 +104,7 @@ def start(files:[str]):
     global Patients
     for file in files:
         df = pd.read_csv(file)
-        createCrDict(df)
+        createPtDict(df)
         createPts(ptDict)
 
 if __name__ == "__main__":
