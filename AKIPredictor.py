@@ -64,10 +64,10 @@ class Patient(object):
      
 def createCrDict(df: DataFrame):
     global ptDict 
-    uniqueMRN = np.unique(df.MRN)
+    uniqueMRN = np.unique(df.ix[:, 0])
     for i in uniqueMRN: ptDict[i] = dict()
     for i in range(len(df)):
-        mrn = df.MRN[i]
+        mrn = df.ix[i, 0]
         creatinine = df.ix[i, 1]
         date = df.ix[i, 2]
         if not(np.isnan(creatinine)): ptDict[mrn][date] = creatinine
