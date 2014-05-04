@@ -2,8 +2,7 @@ from pandas import Series, DataFrame
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-import sys
-import os
+import glob
 
 ptDict = {} # Dictionary containing all lab values
 Patients = {} # Dictonary, keys are MRN, values are Patient objects
@@ -66,18 +65,12 @@ class Patient(object):
 def createCrDict(df: DataFrame):
     global ptDict 
     uniqueMRN = np.unique(df.MRN)
-    for i in uniqueMRN: 
-        ptDict[i] = dict()
-    col = 1
-    while col < len(df.columns):
-        creatinines = df.ix[:, col]
-        dates = df.ix[:, col + 1]
-        for i in range(0, len(df)):
-            mrn = df.MRN[i]
-            c = creatinines[i]
-            d = dates[i]
-            if not(np.isnan(c)): ptDict[mrn][d] = c
-        col = col + 2
+    for i in uniqueMRN: ptDict[i] = dict()
+    for i in range(len(df)):
+        mrn = df.MRN[i]
+        creatinine = df.ix[i, 1]
+        date = df.ix[i, 2]
+        if not(np.isnan(creatinine)): ptDict[mrn][date] = creatinine
     return ptDict
 
 def createPts(patients: dict):
@@ -105,16 +98,16 @@ def getNumAKI():
     df['AKI'] = df.NumAKI > 0
     return DataFrame(df)
 
-def start(path:str):
-    global Patients  
-    df = pd.read_csv(path)
-    createCrDict(df)
-    createPts(ptDict)
-    getNumAKI()
+def start(files:[str]):
+    global Patients
+    for file in files:
+        df = pd.read_csv(file)
+        createCrDict(df)
+        createPts(ptDict)
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1: start(sys.argv[1])
-    else: 
-        path = os.getcwd() + "\\" + "Labs.csv"
-        start(path)
+    files = glob.glob("*.csv")
+    print("The following files are proccessed: ")
+    print(files)
+    start(files)
     input("Done, press enter to exit...")
