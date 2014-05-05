@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""@author: Sami Safadi"""
+
 from pandas import Series, DataFrame
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -71,19 +74,21 @@ def getNumCrs():
 def createPtDict(df: DataFrame):
     global ptDict 
     uniqueMRN = np.unique(df.ix[:, 0])
-    for i in uniqueMRN: ptDict[i] = dict()
+    for i in uniqueMRN: 
+        if not(i in ptDict.keys()): ptDict[i] = dict()
     for i in range(len(df)):
         mrn = df.ix[i, 0]
         creatinine = df.ix[i, 1]
         date = df.ix[i, 2]
-        if not(np.isnan(creatinine)): ptDict[mrn][date] = creatinine
+        if not(np.isnan(mrn) or np.isnan(creatinine)): 
+            ptDict[int(mrn)][str(date)] = float(creatinine)
     return ptDict
 
 def createPts(patients: dict):
     global Patients
     for key in patients:
         crs = patients[key]
-        mrn = int(key)
+        mrn = key
         if len(crs) > 0: Patients[mrn] = Patient(mrn=mrn, data=crs)
 
 def getPlots(keys: list, savetofile = False):
@@ -136,7 +141,9 @@ if __name__ == "__main__":
     files = glob.glob("Input/*.csv")
     print("The following files are proccessed: ", files)
     read(files)
-    print("Processed", getNumPatients(), "patients, and", getNumCrs(), "laboratory values.")
+    message = "Processed {} patients, and {} laboratory values"\
+        .format(getNumPatients(), getNumCrs(),)
+    print(message)
     print("Writing results to disk")    
     write()
     input("Done, press enter to exit...")
