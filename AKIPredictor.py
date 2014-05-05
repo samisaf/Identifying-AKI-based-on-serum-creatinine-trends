@@ -21,7 +21,7 @@ class Patient(object):
         self.aki = self.data.value[self.data.aki]
  
     def __str__(self): 
-        temp = "<MRN {}, baseline cr {}, crs {}, AKI {}>"\
+        temp = "<MRN {}, Base CR {}, Num CRS {}, Num AKI {}>"\
             .format(self.mrn, self.baseCr, len(self.crs), sum(self.data.aki))
         return temp
 
@@ -128,9 +128,9 @@ def read(files:[str]):
 
 def write():
     global Patients
-    getNumAKI(Patients.keys(), True)
-    getAKIDates(Patients.keys(), True)
-    getPlots(Patients.keys(), True)
+    getNumAKI(Patients.keys(), savetofile = True)
+    getAKIDates(Patients.keys(), savetofile = True)
+    getPlots(Patients.keys(), savetofile = True)
     
 if __name__ == "__main__":
     files = glob.glob("Input/*.csv")
