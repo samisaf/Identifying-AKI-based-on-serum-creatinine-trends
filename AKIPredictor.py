@@ -61,7 +61,6 @@ class Patient(object):
         plt.title(str(self))
         plt.xlabel("Date")
         plt.ylabel("Creatinine")
-        plt.show()
         
 def getNumPatients():
     return len(Patients)
@@ -87,34 +86,52 @@ def createPts(patients: dict):
         mrn = int(key)
         if len(crs) > 0: Patients[mrn] = Patient(mrn=mrn, data=crs)
 
-def plotPatients():
+def getPlots(keys: list, savetofile = False):
     global Patients
-    for key in Patients:
+    for key in keys:
         p = Patients[key]
         plt.figure()
         p.plot()
+        if savetofile: 
+            outputfile = "Output/Graphs/" + str(key) + ".png"
+            plt.savefig(outputfile)
+        else: plt.show()
 
-def getNumAKI():
+def getAKIDates(keys: list, savetofile = False):
     global Patients
-    mrn = list()
-    aki = list()
-    for key in Patients:
+    for key in keys:
+        akiDates = Patients[key].aki
+        if savetofile:
+            outputfile = "Output/Dates/" + str(key) + ".csv"
+            if akiDates.size > 0: akiDates.to_csv(outputfile)
+        else:
+            print(akiDates)
+
+def getNumAKI(keys: list, savetofile = False):
+    global Patients
+    mrn, aki, baseCr = [], [], []
+    for key in keys:
         mrn.append(Patients[key].mrn)
         aki.append(Patients[key].aki.size)
-    di = {'MRN': mrn, 'NumOfAKI': aki}
+        baseCr.append(Patients[key].baseCr)
+    di = {'MRN': mrn, 'baseCr': baseCr, 'numAKI': aki}
     df = DataFrame(di)
-    df['AKI'] = df.NumAKI > 0
-    return DataFrame(df)
-
+    df['anyAKI'] = df.numAKI > 0
+    outputfile = "Output/aki.csv"
+    if savetofile: df.to_csv(outputfile)
+    else: print(df)
+    
 def read(files:[str]):
     global Patients
     for file in files: createPtDict(pd.read_csv(file))
     createPts(ptDict)
 
 def write():
-    outputfile = "Output/aki.csv"
-    getNumAKI().to_csv(outputfile, index=False)
-
+    global Patients
+    getNumAKI(Patients.keys(), True)
+    getAKIDates(Patients.keys(), True)
+    getPlots(Patients.keys(), True)
+    
 if __name__ == "__main__":
     files = glob.glob("Input/*.csv")
     print("The following files are proccessed: ", files)
