@@ -1,69 +1,15 @@
 # -*- coding: utf-8 -*-
 """@author: Sami Safadi"""
 
-from pandas import Series, DataFrame
+from patient import Patient
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import glob
 
+demDict = pd.DataFrame()
 ptDict = {} # Dictionary containing all lab values
 Patients = {} # Dictonary, keys are MRN, values are Patient objects
-
-class Patient(object):
-    def __init__(self, mrn: int, data: dict = dict()):
-        self.mrn = mrn
-        self.data = DataFrame(Series(data), columns=['value'])
-        self.data.index = pd.to_datetime(self.data.index)
-        self.crs = self.data.value
-        self.baseCr = self.__calcBaseCr__()
-        self.data['order'] = range(len(data))
-        self.data['slope'] = self.__calcSlopes__()
-        self.data['peak'] = self.__calcPeaks__()
-        self.data['aki'] = self.__calcAKI__()
-        self.aki = self.data.value[self.data.aki]
- 
-    def __str__(self): 
-        temp = "<MRN {}, Base CR {}, Num CRS {}, Num AKI {}>"\
-            .format(self.mrn, self.baseCr, len(self.crs), sum(self.data.aki))
-        return temp
-
-    def __repr__(self): return self.__str__()
-    
-    def __calcBaseCr__(self):
-        return np.percentile(self.crs, 25)
-    
-    def __calcSlopes__(self):
-        slopes = []
-        for i in range(len(self.crs)-1):
-            x1, x2 = self.data.order[i], self.data.order[i+1]
-            y1, y2 = self.data.value[i], self.data.value[i+1]
-            slopes.append((y2-y1)/(x2-x1))
-        # assign slope after last point to the preceding slope
-        if len(slopes) == 0: slopes.append(0) 
-        else: slopes.append(slopes[len(slopes) - 1])
-        return slopes
-        
-    def __calcPeaks__(self):
-        # first point is a peak if following slope is negative
-        peaks = [self.data.slope[0] <= 0] 
-        for i in range(1, len(self.crs)):
-            if self.data.slope[i-1] > 0 and self.data.slope[i] <= 0: 
-                peaks.append(True)
-            else: peaks.append(False)
-        return peaks
-    
-    def __calcAKI__(self):
-        return (self.data.value > self.baseCr * 1.5) & self.data.peak
-                               
-    def plot(self):
-        plt.hlines(self.baseCr, self.data.index.min(), self.data.index.max(), linestyles='dotted')
-        plt.plot(self.data.index, self.data.value)        
-        plt.plot(self.data.index, self.data.value, 'g.')
-        plt.plot(self.data.index[self.data.aki], self.data.value[self.data.aki], 'ro')
-        plt.title(str(self))
-        plt.xlabel("Date")
-        plt.ylabel("Creatinine")
         
 def getNumPatients():
     return len(Patients)
@@ -71,7 +17,7 @@ def getNumPatients():
 def getNumCrs():
     return sum([Patients[p].crs.size for p in Patients])
      
-def createPtDict(df: DataFrame):
+def createPtDict(df: pd.DataFrame):
     global ptDict 
     uniqueMRN = np.unique(df.ix[:, 0])
     for i in uniqueMRN: 
@@ -89,7 +35,13 @@ def createPts(patients: dict):
     for key in patients:
         crs = patients[key]
         mrn = key
-        if len(crs) > 0: Patients[mrn] = Patient(mrn=mrn, data=crs)
+        age, gender, race = 0, 0, 0
+        if any(demDict.MRN == 20):
+            index = demDict.index[demDict.MRN == key][0]
+            age = demDict.Age[index]
+            gender = demDict.Gender[index]
+            race = demDict.Race[index]
+        if len(crs) > 0: Patients[mrn] = Patient(mrn, crs, age, gender, race)
 
 def getPlots(keys: list, savetofile = False):
     global Patients
@@ -114,23 +66,28 @@ def getAKIDates(keys: list, savetofile = False):
 
 def getNumAKI(keys: list, savetofile = False):
     global Patients
-    mrn, aki, baseCr = [], [], []
+    mrn, aki, baseCr, egfr = [], [], [], []
     for key in keys:
         mrn.append(Patients[key].mrn)
         aki.append(Patients[key].aki.size)
         baseCr.append(Patients[key].baseCr)
-    di = {'MRN': mrn, 'baseCr': baseCr, 'numAKI': aki}
-    df = DataFrame(di)
+        egfr.append(Patients[key].egfr)
+    di = {'MRN': mrn, 'baseCr': baseCr, 'numAKI': aki, 'eGFR' : egfr}
+    df = pd.DataFrame(di)
     df['anyAKI'] = df.numAKI > 0
     outputfile = "Output/aki.csv"
-    if savetofile: df.to_csv(outputfile)
+    if savetofile: df.to_csv(outputfile, index = False)
     else: print(df)
-    
-def read(files:[str]):
-    global Patients
-    for file in files: createPtDict(pd.read_csv(file))
-    createPts(ptDict)
 
+def readDemographics(file: str):
+    global demDict
+    demDict = pd.read_csv(file)
+        
+def readLabs(files:[str]):
+    for file in files: 
+        createPtDict(pd.read_csv(file))
+    createPts(ptDict)
+    
 def write():
     global Patients
     getNumAKI(Patients.keys(), savetofile = True)
@@ -138,9 +95,13 @@ def write():
     getPlots(Patients.keys(), savetofile = True)
     
 if __name__ == "__main__":
-    files = glob.glob("Input/*.csv")
-    print("The following files are proccessed: ", files)
-    read(files)
+    demographicsFile = "Input/Demographics.csv"
+    readDemographics(demographicsFile)
+    
+    labFiles = glob.glob("Input/Labs*.csv")
+    print("The following files are proccessed: ", labFiles)
+    readLabs(labFiles)
+    
     message = "Processed {} patients, and {} laboratory values"\
         .format(getNumPatients(), getNumCrs(),)
     print(message)
