@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import glob
 
-demDict = pd.DataFrame()
+demDict = pd.DataFrame(columns = ['MRN', 'age', 'gender', 'race'])
 ptDict = {} # Dictionary containing all lab values
 Patients = {} # Dictonary, keys are MRN, values are Patient objects
         
@@ -16,6 +16,13 @@ def getNumPatients():
     
 def getNumCrs():
     return sum([Patients[p].crs.size for p in Patients])
+
+def stageCKD(egfr):
+    if egfr < 15: return 5
+    elif egfr >= 15 and egfr < 30: return 4
+    elif egfr >= 30 and egfr < 60: return 3
+    elif egfr >= 60 and egfr < 90: return 2
+    else: return np.NaN
      
 def createPtDict(df: pd.DataFrame):
     global ptDict 
@@ -54,7 +61,7 @@ def getPlots(keys: list, savetofile = False):
             plt.savefig(outputfile)
         else: plt.show()
 
-def getAKIDates(keys: list, savetofile = False):
+def getDetailedTables(keys: list, savetofile = False):
     global Patients
     for key in keys:
         akiDates = Patients[key].aki
@@ -63,8 +70,9 @@ def getAKIDates(keys: list, savetofile = False):
             if akiDates.size > 0: akiDates.to_csv(outputfile)
         else:
             print(akiDates)
+    return akiDates
 
-def getNumAKI(keys: list, savetofile = False):
+def getMasterTable(keys: list, savetofile = False):
     global Patients
     mrn, aki, baseCr, egfr = [], [], [], []
     for key in keys:
@@ -75,9 +83,11 @@ def getNumAKI(keys: list, savetofile = False):
     di = {'MRN': mrn, 'baseCr': baseCr, 'numAKI': aki, 'eGFR' : egfr}
     df = pd.DataFrame(di)
     df['anyAKI'] = df.numAKI > 0
+    df['CKD'] = [stageCKD(i) for i in df.eGFR]
     outputfile = "Output/aki.csv"
     if savetofile: df.to_csv(outputfile, index = False)
     else: print(df)
+    return df
 
 def readDemographics(file: str):
     global demDict
@@ -90,13 +100,14 @@ def readLabs(files:[str]):
     
 def write():
     global Patients
-    getNumAKI(Patients.keys(), savetofile = True)
-    getAKIDates(Patients.keys(), savetofile = True)
+    getMasterTable(Patients.keys(), savetofile = True)
+    getDetailedTables(Patients.keys(), savetofile = True)
     getPlots(Patients.keys(), savetofile = True)
     
 if __name__ == "__main__":
     demographicsFile = "Input/Demographics.csv"
-    readDemographics(demographicsFile)
+    try: readDemographics(demographicsFile)
+    except: print("Demographics.csv was not found, proceeding without eGFR calculation") 
     
     labFiles = glob.glob("Input/Labs*.csv")
     print("The following files are proccessed: ", labFiles)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """@author: Sami Safadi"""
 
-from eGFR import ckdepi
+import eGFR
 from pandas import Series, DataFrame
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -20,12 +20,13 @@ class Patient(object):
         
     def initialize(self):
         self.baseCr = self.__calcBaseCr__()
-        self.egfr = ckdepi(self.baseCr, self.age, self.gender, self.race)
         self.data['order'] = range(self.crs.size)
         self.data['slope'] = self.__calcSlopes__()
         self.data['peak'] = self.__calcPeaks__()
         self.data['aki'] = self.__calcAKI__()
         self.aki = self.data.value[self.data.aki]
+        try: self.egfr = eGFR.ckdepi(self.baseCr, self.age, self.gender, self.race)
+        except: self.egfr = np.NaN
         
     def __str__(self): 
         temp = "<MRN {}, Age {}, Gender {}, Race {}, Num CRS {}>"\
