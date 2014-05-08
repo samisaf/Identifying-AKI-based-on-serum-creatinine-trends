@@ -43,7 +43,7 @@ def createPts(patients: dict):
         crs = patients[key]
         mrn = key
         age, gender, race = 0, 0, 0
-        if any(demDict.MRN == 20):
+        if any(demDict.MRN == key):
             index = demDict.index[demDict.MRN == key][0]
             age = demDict.Age[index]
             gender = demDict.Gender[index]
